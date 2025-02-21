@@ -1,0 +1,22 @@
+{
+  "name": "components",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.3.3",
+    "@types/dom-speech-recognition": "^0.0.4",
+    "@types/web": "^0.0.205",
+    "lit": "^3.2.1"
+  },
+  "devDependencies": {
+    "@typescript/lib-dom": "npm:@types/web@^0.0.205",
+    "typescript": "~5.7.2",
+    "vite": "^6.1.0"
+  }
+}
