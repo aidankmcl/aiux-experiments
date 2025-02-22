@@ -112,7 +112,7 @@ export class CommandCategorizer extends LitElement {
 
       console.log(targetMappings, category);
 
-      if (mapping) {
+      if (mapping && mapping.length) {
         const targetOutput = await this.classifier(
           command,
           mapping as string[]
