@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import '../../components/speech-command';
 
 // import '../../components/command-categorizer';
-import { CommandCategorizer } from '../../components/command-categorizer';
+import { CommandCategorizer, CompleteCategorizationEventDetail } from '../../components/command-categorizer';
 
 interface Landmark {
   name: string;
@@ -35,8 +35,8 @@ export class AIVoiceGame extends LitElement {
     .landmark,
     #character {
       position: absolute;
-      max-width: 100px;
-      max-height: 200px;
+      max-width: 150px;
+      max-height: 250px;
       transition: left 1s linear, top 1s linear;
     }
     #controls {
@@ -46,42 +46,53 @@ export class AIVoiceGame extends LitElement {
     button {
       margin-right: 10px;
     }
+    #ui {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+    #ui speech-command {
+      text-align: right;
+      cursor: pointer;
+    }
   `;
 
   // Define landmarks as fixed positions.
   private landmarks: Landmark[] = [
-    { name: 'movie', x: 10, y: 10 },
-    { name: 'game', x: 70, y: 50 },
+    { name: 'movie, boss baby', x: 10, y: 10 },
+    { name: 'game, zelda', x: 70, y: 50 },
     { name: 'shoe', x: 40, y: 80 },
     { name: 'furniture', x: 50, y: 10 },
     { name: 'watch', x: 20, y: 50 }
   ];
 
+  private targetMappings = {
+    move: this.landmarks.map((l) => l.name),
+    take: this.landmarks.map((l) => l.name),
+    put: this.landmarks.map((l) => l.name),
+    party: this.landmarks.map((l) => l.name),
+  };
+
   // Character position state.
   @property({ type: Number })
-  characterX: number = 0;
+  characterX: number = 45;
 
   @property({ type: Number })
-  characterY: number = 0;
+  characterY: number = 45;
+
+  @property({ type: CommandCategorizer })
+  categorizer: CommandCategorizer | null = null;
 
   // Reference for speech recognition, if available.
   recognition: SpeechRecognition | null = null;
 
   render() {
-    const landmarkNames = this.landmarks.map((l) => l.name);
-    const targetMapping = JSON.stringify({
-      move: landmarkNames,
-      remove: landmarkNames,
-      party: landmarkNames
-    });
-
     return html`
       <div id="game-holder">
         <div id="game">
-          ${this.landmarks.map(
-      (landmark) => html`
+          ${this.landmarks.map((landmark) => html`
               <img
-                src="https://via.assets.so/${landmark.name}.png"
+                src="https://via.assets.so/${landmark.name.split(',')[0]}.png"
                 class="landmark"
                 alt="${landmark.name}"
                 data-name="${landmark.name}"
@@ -93,67 +104,38 @@ export class AIVoiceGame extends LitElement {
             src="https://vignette.wikia.nocookie.net/nickelodeon/images/d/d9/DoodleBob.png/revision/latest?cb=20181228054254"
             id="character"
             alt="Character"
-            style="left: ${this.characterX}px; top: ${this.characterY}px;"
+            style="left: ${this.characterX}%; top: ${this.characterY}%;"
           />
         </div>
       </div>
-      <speech-command @command="${this.onCommand}"></speech-command>
-      <command-categorizer id="categorizer"></command-categorizer>
+      <div id="ui">
+        <command-categorizer id="categorizer" .targetMappings="${this.targetMappings}" @complete-categorization="${this.onCategorize}"></command-categorizer>
+        <speech-command @command-detected="${this.onCommand}"></speech-command>
+      </div>
     `;
   }
 
-  updated() {
-    const categorizer = this.shadowRoot?.getElementById('categorizer') as CommandCategorizer;
-    if (!categorizer) return;
-
-    categorizer.targetMappings = {
-      move: this.landmarks.map((l) => l.name),
-      remove: this.landmarks.map((l) => l.name),
-      party: this.landmarks.map((l) => l.name),
-      unknown: []
-    };
-
-    categorizer.addEventListener('refined-command', (e) => {
-      const { action, target } = e.detail;
-      if (action === 'move' && target) {
-        const landmark = this.landmarks.find(l => l.name === target);
-        if (landmark) {
-          this.moveCharacterTo(landmark.x, landmark.y);
-        }
-      }
-    });
+  connectedCallback() {
+    super.connectedCallback();
   }
 
-  onCommand(e: CustomEvent<{ command: string }>) {
-    this.handleCommand(e.detail.command);
+  onCommand(e: CustomEvent<{ originalCommand: string }>) {    
+    this.dispatchEvent(new CustomEvent('request-categorization', {
+      detail: { command: e.detail.originalCommand },
+      bubbles: true,
+      composed: true
+    }));
   }
 
-  onCategorize(e: CustomEvent<{ command: string }>) {
-    this.handleCommand(e.detail.command);
-  }
+  onCategorize(e: CustomEvent<CompleteCategorizationEventDetail>) {
+    const { category, detectedTargets } = e.detail;
 
-  // Parse the user command to detect which landmark is referenced.
-  parseCommand(command: string): string | null {
-    command = command.toLowerCase();
-    for (const landmark of this.landmarks) {
-      if (command.includes(landmark.name)) {
-        return landmark.name;
-      }
-    }
-    return null; c
-  }
-
-  // Handle both voice and text commands.
-  handleCommand(command: string) {
-    console.log(command);
-    const landmarkName = this.parseCommand(command);
-    if (landmarkName) {
-      const target = this.landmarks.find((l) => l.name === landmarkName);
+    if (category === 'move' && detectedTargets.length) {
+      // Move character to the first detected target's position.
+      const target = this.landmarks.find((l) => l.name === detectedTargets[0]);
       if (target) {
         this.moveCharacterTo(target.x, target.y);
       }
-    } else {
-      alert('Could not recognize a landmark in your command.');
     }
   }
 

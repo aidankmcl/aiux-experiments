@@ -2,27 +2,14 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { pipeline, env, ZeroShotClassificationOutput } from '@huggingface/transformers';
 
-// Define command categories
-type CommandCategory = 'move' | 'remove' | 'party' | 'unknown';
-
-const COMMAND_LABELS: CommandCategory[] = ['move', 'remove', 'party', 'unknown'];
-
-const landmarkNames = ['watch', 'game', 'shoe', 'chair', 'movie'];
-const targetMappings = {
-  move: landmarkNames,
-  remove: landmarkNames,
-  party: landmarkNames,
-  unknown: []
-};
-
 interface TargetMapping {
   [command: string]: string[]
 }
 
 // Interface for the refined command event
-interface RefinedCommandEventDetail {
+export interface CompleteCategorizationEventDetail {
   originalCommand: string;
-  category: CommandCategory;
+  category: string;
   confidence: number;
   timestamp: number;
   detectedTargets: string[];
@@ -35,10 +22,8 @@ export class CommandCategorizer extends LitElement {
       display: block;
       font-family: Arial, sans-serif;
     }
-    #command-categorizer {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
+
+    #categorizer {
       background: rgba(0, 0, 0, 0.5);
       padding: 0.1em 1em;
       border-radius: 4px;
@@ -54,7 +39,7 @@ export class CommandCategorizer extends LitElement {
   @property({ type: Object }) targetMappings: TargetMapping = {};
   @state() private categorizedCommand: string = '';
   @state() private commandTarget: string = '';
-  @state() private category: CommandCategory = 'unknown';
+  @state() private category: string = 'unknown';
   @state() private confidence: number = 0;
 
   private classifier: (text: string, labels: string[]) => Promise<ZeroShotClassificationOutput> = () => Promise.resolve({ labels: [], sequence: "", scores: [] });
@@ -70,7 +55,7 @@ export class CommandCategorizer extends LitElement {
     this.initializeClassifier();
 
     // Listen for commands from speech-command component
-    document.addEventListener('command-detected', this.handleCommand.bind(this));
+    document.addEventListener('request-categorization', this.handleCommand.bind(this));
   }
 
   async initializeClassifier() {
@@ -90,7 +75,7 @@ export class CommandCategorizer extends LitElement {
   // Handle incoming command from speech-command
   private async handleCommand(event: Event) {
     const detail = (event as CustomEvent).detail;
-    const command = detail.originalCommand;
+    const command = detail.command;
 
     if (!this.classifier) {
       console.error('Classifier not ready');
@@ -98,7 +83,7 @@ export class CommandCategorizer extends LitElement {
     }
 
     // Categorize the command using ALBERT Base v2
-    const result = await this.categorizeCommand(command);
+    const result = await this.categorizeCommand(command, this.targetMappings);
     this.categorizedCommand = command;
     this.commandTarget = result.detectedTargets[0];
     this.category = result.category;
@@ -109,16 +94,16 @@ export class CommandCategorizer extends LitElement {
   }
 
   // Categorize command using ALBERT Base v2
-  private async categorizeCommand(command: string): Promise<{
-    category: CommandCategory;
+  private async categorizeCommand(command: string, targetMappings: TargetMapping = {}): Promise<{
+    category: string;
     confidence: number;
     detectedTargets: string[];
   }> {
     try {
       if (!this.classifier) throw new Error('Classifier not ready');
 
-      const output = await this.classifier(command, COMMAND_LABELS);
-      const category = output.labels[0] as CommandCategory;
+      const output = await this.classifier(command, Object.keys(targetMappings));
+      const category = output.labels[0];
       const confidence = output.scores[0];
 
       // Then, if we have landmarks for this category, check for them
@@ -151,11 +136,11 @@ export class CommandCategorizer extends LitElement {
   // Emit refined command event
   private emitRefinedCommandEvent(
     command: string,
-    category: CommandCategory,
+    category: string,
     confidence: number,
     detectedTargets: string[]
   ) {
-    const eventDetail: RefinedCommandEventDetail = {
+    const eventDetail: CompleteCategorizationEventDetail = {
       originalCommand: command,
       category,
       confidence,
@@ -163,7 +148,7 @@ export class CommandCategorizer extends LitElement {
       detectedTargets
     };
 
-    this.dispatchEvent(new CustomEvent<RefinedCommandEventDetail>('refined-command', {
+    this.dispatchEvent(new CustomEvent<CompleteCategorizationEventDetail>('complete-categorization', {
       detail: eventDetail,
       bubbles: true,
       composed: true
@@ -172,11 +157,13 @@ export class CommandCategorizer extends LitElement {
 
   render() {
     return html`
-      <div id="command-categorizer">
+      <div id="categorizer">
+        Commands: ${Object.keys(this.targetMappings).join(", ")}<br>
+        Objects: ${this.targetMappings[Object.keys(this.targetMappings)[0]].map(target => target.split(',')[0]).join(", ")}<br>
         ${this.categorizedCommand ? html`
           <div class="result">
             Command: ${this.categorizedCommand}<br>
-            Category: ${this.category} (${(this.confidence * 100).toFixed(2)})<br>
+            Category: ${this.category} (${(this.confidence * 100).toFixed(2)}%)<br>
             Target: ${this.commandTarget}
           </div>
         ` : html`<p>Waiting for command...</p>`}
@@ -186,7 +173,7 @@ export class CommandCategorizer extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener('command-detected', this.handleCommand.bind(this));
+    document.removeEventListener('request-categorization', this.handleCommand.bind(this));
   }
 }
 

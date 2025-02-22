@@ -19,9 +19,7 @@ export class SpeechCommand extends LitElement {
       font-family: Arial, sans-serif;
     }
     #speech-command-wrapper {
-      position: absolute;
-      bottom: 0;
-      right: 0;
+
     }
     button {
       padding: 10px 20px;
@@ -31,6 +29,9 @@ export class SpeechCommand extends LitElement {
       color: white;
       border: none;
       border-radius: 4px;
+    }
+    button:hover {
+      background-color: #45a049;
     }
     button:disabled {
       background-color: #cccccc;
@@ -64,18 +65,16 @@ export class SpeechCommand extends LitElement {
     this.recognition.interimResults = false;
     this.recognition.lang = 'en-US';
 
-    // Setup event listeners for speech recognition
+    // // Setup event listeners for speech recognition
     this.recognition.onresult = (event: SpeechRecognitionEvent) => {
       const command = event.results[0][0].transcript;
-      console.log("recognition", event.results);
       this.transcript = command;
-      // this.category = this.categorizeCommand(command);
-      // this.emitCommandEvent(command, this.category);
       this.emitCommandEvent(command);
     };
 
     this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       console.error('Speech recognition error:', event.error);
+      console.log(event);
       this.listening = false;
     };
 
@@ -86,6 +85,7 @@ export class SpeechCommand extends LitElement {
 
   // Emit custom event with command details
   private emitCommandEvent(command: string) {
+    console.log('emitting command event', command);
     const eventDetail: CommandEventDetail = {
       originalCommand: command,
       timestamp: Date.now()
@@ -122,11 +122,6 @@ export class SpeechCommand extends LitElement {
         >
           ${this.listening ? 'Stop Listening' : 'Start Listening'}
         </button>
-        ${this.transcript ? html`
-          <div class="transcript">
-            Command: ${this.transcript}
-          </div>
-      ` : ''}
       </div>
     `;
   }
