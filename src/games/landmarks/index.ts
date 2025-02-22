@@ -180,7 +180,7 @@ export class AIVoiceGame extends LitElement {
 
   // Modified partyDance to shift background colors and play sound.
   partyDance() {
-    const partySound = new Audio('/doodlebob.mp3');
+    const partySound = new Audio('/aiux-experiments/doodlebob.mp3');
     partySound.play();
     let moves = 10;
 
