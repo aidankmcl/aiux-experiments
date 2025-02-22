@@ -133,8 +133,6 @@ export class CommandCategorizer extends LitElement {
           mapping as string[]
         );
 
-        console.log(targetOutput);
-
         // Only include landmarks with confidence > 0.5
         detectedTargets.push(
           ...targetOutput.labels.filter((_, i) =>

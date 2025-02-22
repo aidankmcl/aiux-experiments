@@ -67,6 +67,7 @@ export class SpeechCommand extends LitElement {
     // Setup event listeners for speech recognition
     this.recognition.onresult = (event: SpeechRecognitionEvent) => {
       const command = event.results[0][0].transcript;
+      console.log("recognition", event.results);
       this.transcript = command;
       // this.category = this.categorizeCommand(command);
       // this.emitCommandEvent(command, this.category);

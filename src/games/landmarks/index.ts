@@ -1,7 +1,9 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import '../../components/speech-command';
-import '../../components/command-categorizer';
+
+// import '../../components/command-categorizer';
+import { CommandCategorizer } from '../../components/command-categorizer';
 
 interface Landmark {
   name: string;
@@ -96,18 +98,37 @@ export class AIVoiceGame extends LitElement {
         </div>
       </div>
       <speech-command @command="${this.onCommand}"></speech-command>
-      <command-categorizer @targetMapping="${targetMapping}"></command-categorizer>
-
-      <script>
-        const categorizer = document.querySelector('command-categorizer');
-        categorizer.addEventListener('refined-command', (e) => {
-          console.log('Refined command:', e.detail);
-        });
-      </script>
+      <command-categorizer id="categorizer"></command-categorizer>
     `;
   }
 
+  updated() {
+    const categorizer = this.shadowRoot?.getElementById('categorizer') as CommandCategorizer;
+    if (!categorizer) return;
+
+    categorizer.targetMappings = {
+      move: this.landmarks.map((l) => l.name),
+      remove: this.landmarks.map((l) => l.name),
+      party: this.landmarks.map((l) => l.name),
+      unknown: []
+    };
+
+    categorizer.addEventListener('refined-command', (e) => {
+      const { action, target } = e.detail;
+      if (action === 'move' && target) {
+        const landmark = this.landmarks.find(l => l.name === target);
+        if (landmark) {
+          this.moveCharacterTo(landmark.x, landmark.y);
+        }
+      }
+    });
+  }
+
   onCommand(e: CustomEvent<{ command: string }>) {
+    this.handleCommand(e.detail.command);
+  }
+
+  onCategorize(e: CustomEvent<{ command: string }>) {
     this.handleCommand(e.detail.command);
   }
 
@@ -119,11 +140,12 @@ export class AIVoiceGame extends LitElement {
         return landmark.name;
       }
     }
-    return null;
+    return null; c
   }
 
   // Handle both voice and text commands.
   handleCommand(command: string) {
+    console.log(command);
     const landmarkName = this.parseCommand(command);
     if (landmarkName) {
       const target = this.landmarks.find((l) => l.name === landmarkName);
