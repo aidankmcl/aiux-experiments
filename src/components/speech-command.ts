@@ -1,8 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
-
-// Define available command categories
-type CommandCategory = 'navigation' | 'action' | 'query' | 'unknown';
+import { customElement, property } from 'lit/decorators.js';
 
 // Interface for the emitted event detail
 interface CommandEventDetail {
@@ -46,8 +43,6 @@ export class SpeechCommand extends LitElement {
 
   // Properties and state
   @property({ type: Boolean }) listening = false;
-  @state() private transcript = '';
-  @state() private category: CommandCategory = 'unknown';
 
   // Speech recognition instance
   private recognition: SpeechRecognition | null = null;
@@ -68,7 +63,6 @@ export class SpeechCommand extends LitElement {
     // // Setup event listeners for speech recognition
     this.recognition.onresult = (event: SpeechRecognitionEvent) => {
       const command = event.results[0][0].transcript;
-      this.transcript = command;
       this.emitCommandEvent(command);
     };
 
@@ -103,8 +97,6 @@ export class SpeechCommand extends LitElement {
     if (this.listening && this.recognition) {
       this.recognition.stop();
     } else {
-      this.transcript = '';
-      this.category = 'unknown';
       if (this.recognition) {
         this.recognition.start();
         this.listening = true;
