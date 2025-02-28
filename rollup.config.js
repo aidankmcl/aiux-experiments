@@ -14,7 +14,7 @@ export default [
   {
     input: './src/index.ts',
     output: {
-      file: 'dist/bundle.js',
+      file: 'lib/bundle.js',
       format: 'es'
     },
     plugins: [
@@ -22,8 +22,8 @@ export default [
       typescript({ 
         compilerOptions: { 
           declaration: true,
-          declarationDir: 'dist',
-          outDir: 'dist' 
+          declarationDir: 'lib',
+          outDir: 'lib' 
         } 
       }),
       terser({
@@ -39,7 +39,7 @@ export default [
     return {
       input: file,
       output: {
-        file: `dist/components/${componentName}.js`,
+        file: `lib/components/${componentName}.js`,
         format: 'es'
       },
       plugins: [
@@ -47,8 +47,8 @@ export default [
         typescript({ 
           compilerOptions: { 
             declaration: true,
-            declarationDir: 'dist/components',
-            outDir: 'dist/components' 
+            declarationDir: 'lib/components',
+            outDir: 'lib/components' 
           } 
         }),
         terser({

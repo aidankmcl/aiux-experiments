@@ -1,62 +1,49 @@
-# AI UX Web Components
+# AI UX Experiments
 
-A collection of web components for AI user interfaces that can be used in any project.
+A library of web components for AI UX patterns.
 
-## Usage
+## Documentation and Examples
 
-These components can be imported directly from GitHub in several ways:
+Visit our [homepage](https://aidankmcl.github.io/aiux-experiments/) for documentation and examples.
 
-### Option 1: Import the entire bundle
+## Installation
 
-```html
-<script type="module" src="https://username.github.io/aiux-experiments/dist/bundle.js"></script>
-```
+### Direct Import (CDN)
 
-### Option 2: Import specific components
+You can use the components directly from GitHub Pages:
 
 ```html
-<script type="module" src="https://username.github.io/aiux-experiments/dist/components/my-button.js"></script>
+<script type="module" src="https://aidankmcl.github.io/aiux-experiments/lib/components/my-button.js"></script>
 ```
 
-### Option 3: Import via ES modules
+Then use the component in your HTML:
 
-```javascript
-import { MyButton } from 'https://username.github.io/aiux-experiments/dist/components/my-button.js';
-```
-
-## Available Components
-
-### `<my-button>`
-
-A simple button component with customizable label.
-
-**Properties:**
-- `label`: String - The button text
-
-**Events:**
-- `button-click`: Dispatched when the button is clicked
-
-**Example:**
 ```html
-<my-button label="Submit"></my-button>
+<my-button label="Click Me"></my-button>
 ```
+
+### NPM (Coming Soon)
+
+```bash
+npm install aiux-experiments
+```
+
+Then import in your JavaScript/TypeScript:
+
+```js
+import 'aiux-experiments/lib/components/my-button.js';
+```
+
+## TypeScript Support
+
+Type definitions are included for all components when importing via npm or using direct imports in a TypeScript project.
 
 ## Development
 
-### Setup
-```
-npm install
-```
-
-### Build
-```
-npm run build
-```
-
-### Development Server
-```
-npm run serve
-```
+1. Clone this repository
+2. Install dependencies: `pnpm install` (intentional `p` in `pnpm`)
+3. Start dev server: `npm run dev` (can use `pnpm` or regular `npm`)
+4. Build: `npm run build` (same)
 
 ## Deployment
 
