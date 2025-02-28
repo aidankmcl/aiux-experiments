@@ -3,7 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import '../../components/speech-command';
 
 // import '../../components/command-categorizer';
-import { CommandCategorizer, CompleteCategorizationEventDetail } from '../../components/command-categorizer';
+import { CommandCategorizer } from '../../components/command-categorizer';
 
 interface Landmark {
   name: string;
@@ -35,8 +35,8 @@ export class AIVoiceGame extends LitElement {
     .landmark,
     #character {
       position: absolute;
-      max-width: 150px;
-      max-height: 250px;
+      max-width: 100px;
+      max-height: 200px;
       transition: left 1s linear, top 1s linear;
     }
     #controls {
@@ -45,15 +45,6 @@ export class AIVoiceGame extends LitElement {
     }
     button {
       margin-right: 10px;
-    }
-    #ui {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-    }
-    #ui speech-command {
-      text-align: right;
-      cursor: pointer;
     }
   `;
 
@@ -66,148 +57,97 @@ export class AIVoiceGame extends LitElement {
     { name: 'watch', x: 20, y: 50 }
   ];
 
-  private targetMappings = {
-    move: this.landmarks.map((l) => l.name),
-    take: this.landmarks.map((l) => l.name),
-    drop: [],
-    party: [],
-  };
-
-  private technoColors = [
-    '#00ff41', // Matrix green
-    '#0ff0fc', // Cyan
-    '#ff00ff', // Magenta
-    '#4b0082', // Indigo
-    '#7b00ff', // Electric purple
-    '#1e90ff', // Dodger blue
-    '#00ffb3', // Neon turquoise
-  ];
-
   // Character position state.
   @property({ type: Number })
-  characterX: number = 45;
+  characterX: number = 0;
 
   @property({ type: Number })
-  characterY: number = 45;
-
-  @property({ type: CommandCategorizer })
-  categorizer: CommandCategorizer | null = null;
-
-  // New property to track the item the player is holding
-  @property({ type: String })
-  holdingItem: string | null = null;
+  characterY: number = 0;
 
   // Reference for speech recognition, if available.
   recognition: SpeechRecognition | null = null;
 
   render() {
+    const landmarkNames = this.landmarks.map((l) => l.name);
+    const targetMapping = JSON.stringify({
+      move: landmarkNames,
+      remove: landmarkNames,
+      party: landmarkNames
+    });
+
     return html`
       <div id="game-holder">
         <div id="game">
-          ${this.landmarks.map((landmark) => {
-            const landmarkX = this.holdingItem === landmark.name ? this.characterX : landmark.x;
-            const landmarkY = this.holdingItem === landmark.name ? this.characterY : landmark.y;
-            return html`
+          ${this.landmarks.map(
+      (landmark) => html`
               <img
-                src="https://via.assets.so/${landmark.name.split(',')[0]}.png"
+                src="https://via.assets.so/${landmark.name}.png"
                 class="landmark"
                 alt="${landmark.name}"
                 data-name="${landmark.name}"
-                style="left: ${landmarkX}%; top: ${landmarkY}%;"
+                style="left: ${landmark.x}%; top: ${landmark.y}%;"
               />
             `
-          })}
+    )}
           <img
             src="https://vignette.wikia.nocookie.net/nickelodeon/images/d/d9/DoodleBob.png/revision/latest?cb=20181228054254"
             id="character"
             alt="Character"
-            style="left: ${this.characterX}%; top: ${this.characterY}%;"
+            style="left: ${this.characterX}px; top: ${this.characterY}px;"
           />
         </div>
       </div>
-      <div id="ui">
-        <command-categorizer id="categorizer" .targetMappings="${this.targetMappings}" @complete-categorization="${this.onCategorize}"></command-categorizer>
-        <speech-command @command-detected="${this.onCommand}"></speech-command>
-      </div>
+      <speech-command @command="${this.onCommand}"></speech-command>
+      <command-categorizer id="categorizer" .data="${targetMapping}"></command-categorizer>
     `;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
+  updated() {
+    const categorizer = this.shadowRoot?.getElementById('categorizer') as CommandCategorizer;
+    if (!categorizer) return;
+
+    this.addEventListener('refined-command', (e) => {
+      const { action, target } = e.detail;
+      if (action === 'move' && target) {
+        const landmark = this.landmarks.find(l => l.name === target);
+        if (landmark) {
+          this.moveCharacterTo(landmark.x, landmark.y);
+        }
+      }
+    });
   }
 
-  onCommand(e: CustomEvent<{ originalCommand: string }>) {    
-    this.dispatchEvent(new CustomEvent('request-categorization', {
-      detail: { command: e.detail.originalCommand },
-      bubbles: true,
-      composed: true
-    }));
+  onCommand(e: CustomEvent<{ command: string }>) {
+    this.handleCommand(e.detail.command);
   }
 
-  onCategorize(e: CustomEvent<CompleteCategorizationEventDetail>) {
-    const { category, detectedTargets } = e.detail;
-    switch (category) {
-      case 'move':
-        if (detectedTargets.length) {
-          const target = this.landmarks.find(l => l.name === detectedTargets[0]);
-          if (target) {
-            this.moveCharacterTo(target.x, target.y);
-          }
-        }
-        break;
-      case 'take':
-        if (detectedTargets.length) {
-          const target = this.landmarks.find(l => l.name === detectedTargets[0]);
-          if (target) {
-            this.moveCharacterTo(target.x, target.y);
-            this.holdingItem = target.name;
-          }
-        }
-        break;
-      case 'drop':
-        if (this.holdingItem) {
-          // Drop the held item
-          this.holdingItem = null;
-        }
-        break;
-      case 'party':
-        this.partyDance();
-        break;
-      default:
-        break;
+  onCategorize(e: CustomEvent<{ command: string }>) {
+    this.handleCommand(e.detail.command);
+  }
+
+  // Parse the user command to detect which landmark is referenced.
+  parseCommand(command: string): string | null {
+    command = command.toLowerCase();
+    for (const landmark of this.landmarks) {
+      if (command.includes(landmark.name)) {
+        return landmark.name;
+      }
     }
+    return null;
   }
 
-  // Modified partyDance to shift background colors and play sound.
-  partyDance() {
-    const partySound = new Audio('/doodlebob.mp3');
-    partySound.play();
-    let moves = 10;
-
-    const gameDiv = this.shadowRoot?.querySelector('#game') as HTMLElement;
-
-    const dance = () => {
-      if (moves > 0) {
-        const randomX = Math.floor(Math.random() * 90);
-        const randomY = Math.floor(Math.random() * 90);
-        this.moveCharacterTo(randomX, randomY);
-        const randomColor = this.technoColors[Math.floor(Math.random() * this.technoColors.length)] + '80'; // 80 = 50% opacity
-
-        if (gameDiv) {
-          gameDiv.style.backgroundColor = randomColor;
-        }
-        moves--;
-        setTimeout(dance, 500);
+  // Handle both voice and text commands.
+  handleCommand(command: string) {
+    console.log(command);
+    const landmarkName = this.parseCommand(command);
+    if (landmarkName) {
+      const target = this.landmarks.find((l) => l.name === landmarkName);
+      if (target) {
+        this.moveCharacterTo(target.x, target.y);
       }
-
-      if (moves === 0) {
-        // Reset background color after the dance
-        if (gameDiv) {
-          gameDiv.style.backgroundColor = '#f0f0f0';
-        }
-      }
-    };
-    dance();
+    } else {
+      alert('Could not recognize a landmark in your command.');
+    }
   }
 
   // Update the character's position.
