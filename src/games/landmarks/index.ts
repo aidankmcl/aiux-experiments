@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import '../../components/speech-command';
+import '../../components/speech-recognition';
 
 // import '../../components/command-categorizer';
 import { CommandCategorizer } from '../../components/command-categorizer';
@@ -97,7 +97,7 @@ export class AIVoiceGame extends LitElement {
           />
         </div>
       </div>
-      <speech-command @command="${this.onCommand}"></speech-command>
+      <speech-recognition @command="${this.onCommand}"></speech-recognition>
       <command-categorizer id="categorizer" .data="${targetMapping}"></command-categorizer>
     `;
   }

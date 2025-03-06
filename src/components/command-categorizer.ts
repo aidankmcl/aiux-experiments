@@ -6,15 +6,6 @@ interface TargetMapping {
   [command: string]: string[]
 }
 
-// Interface for the refined command event
-export interface CompleteCategorizationEventDetail {
-  originalCommand: string;
-  category: string;
-  confidence: number;
-  timestamp: number;
-  detectedTargets: string[];
-}
-
 @customElement('command-categorizer')
 export class CommandCategorizer extends LitElement {
   static styles = css`
@@ -36,7 +27,7 @@ export class CommandCategorizer extends LitElement {
   `;
 
   @property({ type: String }) modelName = 'Xenova/nli-deberta-v3-small';
-  @property({ type: Object }) targetMappings: TargetMapping = {};
+  @state() targetMappings: TargetMapping = {};
   @state() private categorizedCommand: string = '';
   @state() private commandTarget: string = '';
   @state() private category: string = 'unknown';
@@ -54,8 +45,8 @@ export class CommandCategorizer extends LitElement {
     // Initialize the classifier
     this.initializeClassifier();
 
-    // Listen for commands from speech-command component
-    document.addEventListener('request-categorization', this.handleCommand.bind(this));
+    // Listen for commands from speech-recognition component
+    this.addEventListener('request-categorization', this.handleCommand.bind(this));
   }
 
   async initializeClassifier() {
@@ -72,10 +63,10 @@ export class CommandCategorizer extends LitElement {
     }
   }
 
-  // Handle incoming command from speech-command
-  private async handleCommand(event: Event) {
-    const detail = (event as CustomEvent).detail;
-    const command = detail.command;
+  // Handle incoming command from speech-recognition
+  private async handleCommand(event: CustomEvent<RequestCategorization>) {
+    const detail = event.detail;
+    const { command, targetMappings } = detail;
 
     if (!this.classifier) {
       console.error('Classifier not ready');
@@ -83,7 +74,7 @@ export class CommandCategorizer extends LitElement {
     }
 
     // Categorize the command using ALBERT Base v2
-    const result = await this.categorizeCommand(command, this.targetMappings);
+    const result = await this.categorizeCommand(command, targetMappings);
     this.categorizedCommand = command;
     this.commandTarget = result.detectedTargets[0];
     this.category = result.category;
@@ -99,6 +90,8 @@ export class CommandCategorizer extends LitElement {
     confidence: number;
     detectedTargets: string[];
   }> {
+    this.targetMappings = targetMappings;
+
     try {
       if (!this.classifier) throw new Error('Classifier not ready');
 
@@ -109,8 +102,6 @@ export class CommandCategorizer extends LitElement {
       // Then, if we have landmarks for this category, check for them
       const detectedTargets: string[] = [];
       const mapping = targetMappings[category];
-
-      console.log(targetMappings, category);
 
       if (mapping && mapping.length) {
         const targetOutput = await this.classifier(
@@ -140,26 +131,26 @@ export class CommandCategorizer extends LitElement {
     confidence: number,
     detectedTargets: string[]
   ) {
-    const eventDetail: CompleteCategorizationEventDetail = {
-      originalCommand: command,
-      category,
-      confidence,
-      timestamp: Date.now(),
-      detectedTargets
-    };
-
-    this.dispatchEvent(new CustomEvent<CompleteCategorizationEventDetail>('complete-categorization', {
-      detail: eventDetail,
+    this.dispatchEvent(new CustomEvent('complete-categorization', {
+      detail: {
+        originalCommand: command,
+        category,
+        confidence,
+        timestamp: Date.now(),
+        detectedTargets
+      },
       bubbles: true,
       composed: true
     }));
   }
 
   render() {
+    const mappedObjects = Object.keys(this.targetMappings).length ? this.targetMappings[Object.keys(this.targetMappings)[0]] : [];
+
     return html`
       <div id="categorizer">
         Commands: ${Object.keys(this.targetMappings).join(", ")}<br>
-        Objects: ${this.targetMappings[Object.keys(this.targetMappings)[0]].map(target => target.split(',')[0]).join(", ")}<br>
+        Objects: ${mappedObjects.map(target => target.split(',')[0]).join(", ")}<br>
         ${this.categorizedCommand ? html`
           <div class="result">
             Command: ${this.categorizedCommand}<br>
@@ -173,13 +164,13 @@ export class CommandCategorizer extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
-    document.removeEventListener('request-categorization', this.handleCommand.bind(this));
+    this.removeEventListener('request-categorization', this.handleCommand.bind(this));
   }
 }
 
 // Example usage:
 /*
-<speech-command></speech-command>
+<speech-recognition></speech-recognition>
 <command-categorizer></command-categorizer>
 
 <script>

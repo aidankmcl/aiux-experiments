@@ -4,12 +4,23 @@
   "version": "0.1.0",
   "description": "AI UX Component Library",
   "type": "module",
+  "main": "lib/bundle.js",
+  "module": "lib/bundle.js",
+  "exports": {
+    ".": "./lib/bundle.js",
+    "./components/*": "./lib/components/*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aidankmcl/aiux-experiments.git"
+  },
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",
     "clean": "rimraf lib dist",
     "prebuild": "npm run clean",
-    "test": "echo \"No tests yet\""
+    "test": "echo \"No tests yet\"",
+    "serve": "wds --open"
   },
   "files": [
     "lib",
