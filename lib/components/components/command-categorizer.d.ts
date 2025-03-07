@@ -5,6 +5,7 @@ interface TargetMapping {
 export declare class CommandCategorizer extends LitElement {
     static styles: import("lit").CSSResult;
     modelName: string;
+    debug: boolean;
     targetMappings: TargetMapping;
     private categorizedCommand;
     private commandTarget;

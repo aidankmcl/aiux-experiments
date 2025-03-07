@@ -4,270 +4,117 @@
   <meta charset="utf-8">
   <title>AI UX Components Demo</title>
   <script type="module" src="/lib/components/speech-recognition.js"></script>
-  <style>
-    body {
-      font-family: sans-serif;
-      line-height: 1.6;
-      margin: 0;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    h1 {
-      color: #333;
-    }
-    .component-container {
-      margin-bottom: 30px;
-      padding: 20px;
-      border-radius: 8px;
-      background-color: #fff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .component-title {
-      font-size: 1.2em;
-      color: #555;
-      margin-bottom: 15px;
-    }
-    #command-log {
-      margin-top: 20px;
-      padding: 10px;
-      background: #f0f0f0;
-      border-radius: 4px;
-      max-height: 200px;
-      overflow-y: auto;
-    }
-    .log-entry {
-      margin-bottom: 5px;
-      padding: 5px;
-      border-bottom: 1px solid #ddd;
-    }
-    .code-sample {
-      background: #f8f8f8;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      padding: 15px;
-      margin: 15px 0;
-      overflow-x: auto;
-      font-family: monospace;
-    }
-    .code-sample code {
-      white-space: pre;
-    }
-    .demo-section {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #eee;
-    }
-    .voice-control {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    .voice-button {
-      background-color: #4285f4;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      padding: 8px 16px;
-      cursor: pointer;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      transition: background-color 0.2s;
-    }
-    .voice-button:hover {
-      background-color: #3367d6;
-    }
-    .voice-button.listening {
-      background-color: #ea4335;
-      animation: pulse 1.5s infinite;
-    }
-    .voice-button svg {
-      width: 18px;
-      height: 18px;
-    }
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-    .status-indicator {
-      font-size: 0.9em;
-      color: #666;
-    }
-  </style>
+  <script type="module" src="/lib/components/command-categorizer.js"></script>
+
+  <link href="./styles.css" rel="stylesheet">
+  <link href="./render.css" rel="stylesheet">
+  <link href="./prism.css" rel="stylesheet" />
 </head>
 <body>
   <h1>AI UX Components Demo</h1>
   <p>Below you can see examples of the components:</p>
-  
-  <!-- Components demo section -->
-  <div class="components-demo">
-    <!-- Speech Recognition Component -->
-    <div class="component-container">
-      <div class="component-title">Speech Recognition</div>
-      
-      <p>The speech-recognition component captures voice input and converts it to text commands.</p>
-      
-      <!-- Code sample -->
-      <div class="code-sample">
-        <code>// You can use it standalone and work with the returned "speech-detected" event
-&lt;speech-recognition&gt;&lt;/speech-recognition&gt;
 
-// Or connect it to your context
-&lt;speech-recognition id="nobutton" nobutton&gt;&lt;/speech-recognition&gt;
-&lt;button id="start-listening"&gt;Start Listening&lt;/button&gt;
-&lt;script&gt;
-  document.getElementById('start-listening').addEventListener('click', () => {
-    const speech = document.querySelector('speech-recognition#nobutton');
+  <section class="demo">
+    <h2>Speech Recognition</h2>
+    <p>The speech-recognition component captures voice input and converts it to text commands.</p>
+    <h3>Import</h3>
+    <pre><code class="language-html">&lt;script type="module" src="https://cdn.jsdelivr.net/gh/aidankmcl/aiux-experiments@main/lib/components/speech-recognition.js"&gt;&lt;/script&gt;</code></pre>
+    <!-- Define the snippet here -->
+    <template id="base-speech-recognition">
+<speech-recognition id="standalone-speech"></speech-recognition>
+<div id="speech-log" class="results-area"></div>
 
-    // Trigger listening with .startListening()
-    speech.startListening();
-
-    // or if you need to cut the listening
-    speech.stopListening();
-
-    // or if you need to check if it's listening
-    if (speech.isListening()) {
-      console.log('Listening...');
-    }
-  });
-&lt;/script&gt;</code>
-      </div>
-      
-      <!-- Live demo -->
-      <div class="demo-section">
-        <h3>Live Demo:</h3>
-        <div class="voice-control">
-          <speech-recognition id="standalone-speech"></speech-recognition>
-          <span id="standalone-status" class="status-indicator"></span>
-        </div>
+<script>
+  // Standalone speech recognition setup
+  const standaloneSpeech = document.getElementById('standalone-speech');
+  const speechLog = document.getElementById('speech-log');
         
-        <div id="speech-log">
-          <h3>Speech Log:</h3>
-        </div>
-      </div>
-    </div>
+  standaloneSpeech.addEventListener('speech-detected', (e) => {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<strong>Speech detected:</strong> "${e.detail.originalCommand}"`;
+    speechLog.appendChild(entry);
+    speechLog.scrollTop = speechLog.scrollHeight;
+  });
+  
+  standaloneSpeech.addEventListener('listening-stopped', () => {
+    console.log("stopped listening");
+  });
+</script>
+    </template>
+    <!-- Placeholder for code display -->
+    <h3>Sample</h3>
+    <pre><code class="code-display language-html"></code></pre>
+    <!-- Placeholder for live demo -->
+    <h3>Live</h3>
+    <div class="live"></div>
+  </section>
 
-    <!-- Command Categorizer with Speech Component -->
-    <div class="component-container">
-      <div class="component-title">Speech Command & Command Categorizer</div>
-      
-      <p>This example shows how the speech-recognition and command-categorizer components work together.</p>
-      
-      <!-- Code sample -->
-      <div class="code-sample">
-        <code>&lt;speech-recognition&gt;&lt;/speech-recognition&gt;
-&lt;command-categorizer id="categorizer"&gt;&lt;/command-categorizer&gt;
-&lt;button id="start-command"&gt;Start Command&lt;/button&gt;
+  <section class="demo">
+    <h2>Recognize Speech & Categorize Command</h2>
+    <p>This example shows how the speech-recognition and command-categorizer components work together.</p>
+    <h3>Import</h3>
+    <pre><code class="language-html">&lt;script type="module" src="https://cdn.jsdelivr.net/gh/aidankmcl/aiux-experiments@main/lib/components/speech-recognition.js"&gt;&lt;/script&gt;
+&lt;script type="module" src="https://cdn.jsdelivr.net/gh/aidankmcl/aiux-experiments@main/lib/components/command-categorizer.js"&gt;&lt;/script&gt;</code></pre>
+    <!-- Define the snippet here -->
+    <template id="command-recognition">
+<speech-recognition id="combined-speech"></speech-recognition>
+<command-categorizer id="categorizer"></command-categorizer>
+<div id="command-log" class="results-area"></div>
 
-&lt;script&gt;
-  // Connect speech command to command categorizer
+<script>
+  // Speech + categorizer setup
+  const combinedSpeech = document.getElementById('combined-speech');
+  const commandCategorizer = document.querySelector('command-categorizer');
+  const commandLog = document.getElementById('command-log');
+  
+  combinedSpeech.addEventListener('listening-stopped', (e) => {
+    console.log("combined demo: stopped listening");
+  });
+  
   const targetMappings = {
-    'navigation': ['go home', 'go back', 'scroll down', 'scroll up'],
-    'media': ['play music', 'pause video', 'next track', 'previous track'],
-    'system': ['increase volume', 'decrease brightness', 'open settings', 'turn off']
+    'navigation': ['home', 'back', 'down', 'up'],
+    'media': ['play', 'pause', 'next', 'previous'],
+    'system': ['increase', 'decrease', 'open', 'turn off']
   };
   
-  document.querySelector('speech-recognition').addEventListener('speech-detected', (e) => {
-    document.dispatchEvent(new CustomEvent('request-categorization', {
+  // Connect speech command to command categorizer
+  combinedSpeech.addEventListener('speech-detected', (e) => {
+    console.log('Command detected', e.detail);
+    
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<strong>Speech detected:</strong> "${e.detail.originalCommand}"`;
+    commandLog.appendChild(entry);
+
+    // Forward the command to the categorizer
+    commandCategorizer.dispatchEvent(new CustomEvent('request-categorization', {
       detail: { command: e.detail.originalCommand, targetMappings },
       bubbles: true
     }));
   });
   
-  document.getElementById('start-command').addEventListener('click', () => {
-    document.querySelector('speech-recognition').startListening();
+  // Listen for categorization results
+  commandCategorizer.addEventListener('complete-categorization', (e) => {
+    console.log('Categorized', e.detail);
+    
+    const entry = document.createElement('div');
+    entry.className = 'log-entry category-result';
+    entry.innerHTML = `<strong>Category:</strong> ${e.detail.category || 'uncategorized'} (${(e.detail.confidence * 100).toFixed(1)}%) <strong>Target:</strong> "${e.detail.detectedTargets.join(', ')}"`;
+    commandLog.appendChild(entry);
+    commandLog.scrollTop = commandLog.scrollHeight;
   });
-&lt;/script&gt;</code>
-      </div>
-      
-      <!-- Live demo -->
-      <div class="demo-section">
-        <h3>Live Demo:</h3>
-        <div class="voice-control">
-          <speech-recognition id="combined-speech"></speech-recognition>
-        </div>
-        <command-categorizer id="categorizer"></command-categorizer>
-        
-        <div id="command-log">
-          <h3>Command Log:</h3>
-        </div>
-      </div>
-    </div>
-  </div>
+</script>
+    </template>
+    <!-- Placeholder for code display -->
+    <h3>Sample</h3>
+    <pre><code class="code-display language-html"></code></pre>
+    <!-- Placeholder for live demo -->
+    <h3>Live</h3>
+    <div class="live"></div>
+  </section>
 
-  <script>
-    // Wait for components to be defined
-    window.addEventListener('DOMContentLoaded', () => {
-      // Standalone speech recognition setup
-      const standaloneSpeech = document.getElementById('standalone-speech');
-      const standaloneStatus = document.getElementById('standalone-status');
-      const speechLog = document.getElementById('speech-log');
-            
-      standaloneSpeech.addEventListener('speech-detected', (e) => {
-        standaloneStatus.textContent = '';
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.innerHTML = `<strong>Speech detected:</strong> "${e.detail.originalCommand}"`;
-        speechLog.appendChild(entry);
-        speechLog.scrollTop = speechLog.scrollHeight;
-      });
-      
-      standaloneSpeech.addEventListener('listening-stopped', () => {
-        standaloneStatus.textContent = '';
-      });
-      
-      // Speech + categorizer setup
-      const combinedSpeech = document.getElementById('combined-speech');
-      const commandCategorizer = document.querySelector('command-categorizer');
-      const commandLog = document.getElementById('command-log');
-      
-      combinedSpeech.addEventListener('listening-stopped', (e) => {
-        console.log("combined demo: stopped listening");
-      });
-      
-      const targetMappings = {
-        'navigation': ['go home', 'go back', 'scroll down', 'scroll up'],
-        'media': ['play music', 'pause video', 'next track', 'previous track'],
-        'system': ['increase volume', 'decrease brightness', 'open settings', 'turn off']
-      };
-      
-      // Connect speech command to command categorizer
-      combinedSpeech.addEventListener('speech-detected', (e) => {
-        logEvent('Command detected', e.detail);
-
-        // Forward the command to the categorizer
-        document.dispatchEvent(new CustomEvent('request-categorization', {
-          detail: { command: e.detail.originalCommand, targetMappings },
-          bubbles: true
-        }));
-      });
-      
-      // Listen for categorization results
-      commandCategorizer.addEventListener('complete-categorization', (e) => {
-        logEvent('Categorized', e.detail);
-      });
-      
-      // Helper function to log events to the UI
-      function logEvent(type, data) {
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.innerHTML = `
-          <strong>${type}:</strong> 
-          ${type === 'Command detected' ? 
-            `"${data.originalCommand}"` : 
-            `"${data.originalCommand}" → ${data.category} (${(data.confidence * 100).toFixed(1)}%)
-             ${data.detectedTargets.length ? '| Target: ' + data.detectedTargets.join(', ') : ''}`
-          }
-        `;
-        commandLog.appendChild(entry);
-        
-        // Scroll to bottom of log
-        commandLog.scrollTop = commandLog.scrollHeight;
-      }
-    });
-  </script>
+  <script src="render-snippets.js"></script>
+  <script src="prism.js"></script>
 </body>
 </html>

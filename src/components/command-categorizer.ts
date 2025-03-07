@@ -14,8 +14,11 @@ export class CommandCategorizer extends LitElement {
       font-family: Arial, sans-serif;
     }
 
+    :host(:not([debug])) {
+      display: none;
+    }
+
     #categorizer {
-      background: rgba(0, 0, 0, 0.5);
       padding: 0.1em 1em;
       border-radius: 4px;
     }
@@ -27,6 +30,7 @@ export class CommandCategorizer extends LitElement {
   `;
 
   @property({ type: String }) modelName = 'Xenova/nli-deberta-v3-small';
+  @property({ type: Boolean }) debug = false;
   @state() targetMappings: TargetMapping = {};
   @state() private categorizedCommand: string = '';
   @state() private commandTarget: string = '';
@@ -67,6 +71,7 @@ export class CommandCategorizer extends LitElement {
   private async handleCommand(event: CustomEvent<RequestCategorization>) {
     const detail = event.detail;
     const { command, targetMappings } = detail;
+    console.log('categorizer got event', command, targetMappings)
 
     if (!this.classifier) {
       console.error('Classifier not ready');
@@ -167,16 +172,3 @@ export class CommandCategorizer extends LitElement {
     this.removeEventListener('request-categorization', this.handleCommand.bind(this));
   }
 }
-
-// Example usage:
-/*
-<speech-recognition></speech-recognition>
-<command-categorizer></command-categorizer>
-
-<script>
-  const categorizer = document.querySelector('command-categorizer');
-  categorizer.addEventListener('refined-command', (e) => {
-    console.log('Refined command:', e.detail);
-  });
-</script>
-*/

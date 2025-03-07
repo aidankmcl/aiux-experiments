@@ -28,7 +28,7 @@ importers:
         specifier: ^0.0.4
         version: 0.0.4
       '@web/dev-server':
-        specifier: ^0.1.34
+        specifier: ^0.1.38
         version: 0.1.38
       rimraf:
         specifier: ^5.0.0
