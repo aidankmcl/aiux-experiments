@@ -6,7 +6,8 @@ export declare class SpeechCommand extends LitElement {
     private worker;
     private workerReady;
     private workerError;
-    private recognition;
+    private transcript;
+    private interimTranscript;
     constructor();
     private initializeWorker;
     private handleWorkerMessage;

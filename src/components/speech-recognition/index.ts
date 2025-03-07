@@ -1,7 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { 
-  speechWorkerURL, 
+  getSpeechWorker, 
   cleanupSpeechWorker, 
   SpeechWorkerOutMessage 
 } from './speech-worker';
@@ -63,64 +63,19 @@ export class SpeechCommand extends LitElement {
   @state() private worker: Worker | null = null;
   @state() private workerReady: boolean = false;
   @state() private workerError: string | null = null;
-
-  // Speech recognition instance
-  private recognition: SpeechRecognition | null = null;
+  @state() private transcript: string = '';
+  @state() private interimTranscript: string = '';
 
   constructor() {
     super();
-    // Initialize worker - now using the URL from our TypeScript worker file
+    // Initialize worker
     this.initializeWorker();
-    
-    // Initialize SpeechRecognition (with fallback for webkit)
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error('Speech Recognition API not supported in this browser');
-      return;
-    }
-    this.recognition = new SpeechRecognition();
-    this.recognition.continuous = false;
-    this.recognition.interimResults = false;
-    this.recognition.lang = 'en-US';
-
-    // Setup event listeners for speech recognition
-    this.recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const command = event.results[0][0].transcript;
-      // Send to worker for processing
-      if (this.worker && this.workerReady) {
-        this.worker.postMessage({
-          type: 'process_command',
-          data: { command }
-        });
-      } else {
-        // Fallback if worker isn't ready
-        this.emitCommandEvent(command);
-      }
-    };
-
-    this.recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('Speech recognition error:', event.error);
-      console.log(event);
-      this.listening = false;
-      this.dispatchEvent(new CustomEvent('listening-stopped', {
-        bubbles: true,
-        composed: true
-      }));
-    };
-
-    this.recognition.onend = () => {
-      this.listening = false;
-      this.dispatchEvent(new CustomEvent('listening-stopped', {
-        bubbles: true,
-        composed: true
-      }));
-    };
   }
 
   private initializeWorker() {
     try {
       // Create the web worker from our TypeScript-generated URL
-      this.worker = new Worker(speechWorkerURL);
+      this.worker = getSpeechWorker();
       
       // Set up message handling
       this.worker.addEventListener('message', this.handleWorkerMessage.bind(this));
@@ -147,8 +102,29 @@ export class SpeechCommand extends LitElement {
         this.workerError = null;
         break;
         
-      case 'command_processed':
-        this.emitCommandEvent(data.originalCommand);
+      case 'transcript':
+        if (data.isFinal) {
+          this.transcript = data.transcript;
+          this.interimTranscript = '';
+          this.emitCommandEvent(data.transcript);
+        } else {
+          this.interimTranscript = data.transcript;
+        }
+        break;
+        
+      case 'listening_state':
+        this.listening = data.listening;
+        if (!data.listening) {
+          this.dispatchEvent(new CustomEvent('listening-stopped', {
+            bubbles: true,
+            composed: true
+          }));
+        } else {
+          this.dispatchEvent(new CustomEvent('listening-started', {
+            bubbles: true,
+            composed: true
+          }));
+        }
         break;
         
       case 'error':
@@ -188,18 +164,21 @@ export class SpeechCommand extends LitElement {
 
   // Public method to start listening
   public startListening() {
-    console.log('Starting speech recognition', !!this.recognition, this.listening);
-    if (this.recognition && !this.listening) {
-      this.recognition.start();
-      this.listening = true;
+    console.log('Starting speech recognition', !!this.worker, this.workerReady);
+    if (this.worker && this.workerReady && !this.listening) {
+      this.worker.postMessage({
+        type: 'start_recognition',
+        data: { lang: 'en-US' }
+      });
     }
   }
 
   // Public method to stop listening
   public stopListening() {
-    if (this.recognition && this.listening) {
-      this.recognition.stop();
-      // The listening state will be updated in the onend event handler
+    if (this.worker && this.workerReady && this.listening) {
+      this.worker.postMessage({
+        type: 'stop_recognition'
+      });
     }
   }
   
@@ -210,13 +189,10 @@ export class SpeechCommand extends LitElement {
 
   // Toggle speech recognition
   private toggleListening() {
-    if (this.listening && this.recognition) {
-      this.recognition.stop();
+    if (this.listening) {
+      this.stopListening();
     } else {
-      if (this.recognition) {
-        this.recognition.start();
-        this.listening = true;
-      }
+      this.startListening();
     }
   }
 
@@ -231,7 +207,7 @@ export class SpeechCommand extends LitElement {
         ${this.workerError ? html`<div class="error">${this.workerError}</div>` : ''}
         <button
           @click=${this.toggleListening}
-          ?disabled=${!window.SpeechRecognition && !window.webkitSpeechRecognition}
+          ?disabled=${!this.workerReady}
           class=${this.listening ? 'listening' : ''}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -240,6 +216,12 @@ export class SpeechCommand extends LitElement {
           </svg>
           ${this.listening ? 'Stop Listening' : 'Start Listening'}
         </button>
+        ${this.transcript || this.interimTranscript ? html`
+          <div class="transcript">
+            ${this.transcript}
+            <span class="interim">${this.interimTranscript}</span>
+          </div>
+        ` : ''}
       </div>
     `;
   }

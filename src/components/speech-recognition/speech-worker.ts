@@ -1,91 +1,70 @@
 // TypeScript worker implementation for speech processing
 
-// Type definitions for worker messages
-export interface WorkerMessageEvent {
-  data: WorkerMessage;
+// Input message types from main thread to worker
+export interface StartRecognitionMessage {
+  type: 'start_recognition';
+  data?: { lang?: string };
 }
 
-export interface WorkerMessage {
-  type: string;
-  data?: any;
+export interface StopRecognitionMessage {
+  type: 'stop_recognition';
 }
 
-export interface ProcessCommandMessage extends WorkerMessage {
-  type: 'process_command';
+export type SpeechWorkerInMessage = 
+  | StartRecognitionMessage
+  | StopRecognitionMessage;
+
+// Output message types from worker to main thread
+export interface ReadyMessage {
+  type: 'ready';
+  data: undefined
+}
+
+export interface TranscriptMessage {
+  type: 'transcript';
   data: {
-    command: string;
-  };
-}
-
-export interface CommandProcessedMessage extends WorkerMessage {
-  type: 'command_processed';
-  data: {
-    originalCommand: string;
+    transcript: string;
+    isFinal: boolean;
     timestamp: number;
   };
 }
 
-export type SpeechWorkerInMessage = ProcessCommandMessage;
-export type SpeechWorkerOutMessage = CommandProcessedMessage | WorkerMessage;
+export interface ErrorMessage {
+  type: 'error';
+  data: {
+    message: string;
+    error: any;
+  };
+}
 
-// The actual worker code
-const workerCode = () => {
-  const ctx: Worker = self as any;
-  
-  // Add error handler for uncaught errors
-  ctx.addEventListener('error', (error: ErrorEvent) => {
-    ctx.postMessage({
-      type: 'error',
-      data: { message: 'Worker error', error: String(error) }
-    });
-  });
+export interface ListeningStateMessage {
+  type: 'listening_state';
+  data: {
+    listening: boolean;
+  };
+}
 
-  // Process the speech recognition results
-  ctx.addEventListener('message', (event: MessageEvent) => {
-    try {
-      const { type, data } = event.data;
-      
-      switch (type) {
-        case 'process_command':
-          // Here we can do any text processing needed on the command
-          ctx.postMessage({
-            type: 'command_processed',
-            data: {
-              originalCommand: data.command,
-              timestamp: Date.now()
-            }
-          });
-          break;
-          
-        default:
-          console.error('Unknown message type:', type);
-      }
-    } catch (error) {
-      ctx.postMessage({
-        type: 'error',
-        data: { message: 'Message processing error', error: String(error) }
-      });
-    }
-  });
+export type SpeechWorkerOutMessage = 
+  | ReadyMessage
+  | TranscriptMessage
+  | ErrorMessage
+  | ListeningStateMessage;
 
-  // Let the main thread know the worker is ready
-  try {
-    ctx.postMessage({ type: 'ready' });
-  } catch (error) {
-    console.error('Failed to send ready message:', error);
+// Create worker instance using the separate implementation file
+let _speechWorker: Worker | null = null;
+
+// Get or create the speech worker instance
+export function getSpeechWorker(): Worker {
+  if (!_speechWorker) {
+    _speechWorker = new Worker(new URL('./speech-worker-impl.ts', import.meta.url));
   }
-};
+  return _speechWorker;
+}
 
-// Convert the worker function to a string
-const workerCodeStr = `(${workerCode.toString()})()`;
-
-// Create a Blob containing the worker code
-const blob = new Blob([workerCodeStr], { type: 'application/javascript' });
-
-// Create a URL for the Blob
-export const speechWorkerURL = URL.createObjectURL(blob);
-
-// Clean up function to revoke the URL when done
-export function cleanupSpeechWorker() {
-  URL.revokeObjectURL(speechWorkerURL);
+// Clean up the worker when done
+export function cleanupSpeechWorker(): void {
+  if (_speechWorker) {
+    _speechWorker.terminate();
+    _speechWorker = null;
+  }
 }

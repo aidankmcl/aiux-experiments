@@ -1,24 +1,38 @@
-export interface WorkerMessageEvent {
-    data: WorkerMessage;
-}
-export interface WorkerMessage {
-    type: string;
-    data?: any;
-}
-export interface ProcessCommandMessage extends WorkerMessage {
-    type: 'process_command';
-    data: {
-        command: string;
+export interface StartRecognitionMessage {
+    type: 'start_recognition';
+    data?: {
+        lang?: string;
     };
 }
-export interface CommandProcessedMessage extends WorkerMessage {
-    type: 'command_processed';
+export interface StopRecognitionMessage {
+    type: 'stop_recognition';
+}
+export type SpeechWorkerInMessage = StartRecognitionMessage | StopRecognitionMessage;
+export interface ReadyMessage {
+    type: 'ready';
+    data: undefined;
+}
+export interface TranscriptMessage {
+    type: 'transcript';
     data: {
-        originalCommand: string;
+        transcript: string;
+        isFinal: boolean;
         timestamp: number;
     };
 }
-export type SpeechWorkerInMessage = ProcessCommandMessage;
-export type SpeechWorkerOutMessage = CommandProcessedMessage | WorkerMessage;
-export declare const speechWorkerURL: string;
+export interface ErrorMessage {
+    type: 'error';
+    data: {
+        message: string;
+        error: any;
+    };
+}
+export interface ListeningStateMessage {
+    type: 'listening_state';
+    data: {
+        listening: boolean;
+    };
+}
+export type SpeechWorkerOutMessage = ReadyMessage | TranscriptMessage | ErrorMessage | ListeningStateMessage;
+export declare function getSpeechWorker(): Worker;
 export declare function cleanupSpeechWorker(): void;
