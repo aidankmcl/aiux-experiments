@@ -1,62 +1,22 @@
-import resolve from '@rollup/plugin-node-resolve';
-import terser from '@rollup/plugin-terser';
-import summary from 'rollup-plugin-summary';
 import typescript from '@rollup/plugin-typescript';
-import { readdirSync } from 'fs';
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
 
-// Automatically discover components in src/components directory
-const componentFiles = readdirSync('./src/components')
-  .filter(file => file.endsWith('.ts'))
-  .map(file => `./src/components/${file}`);
-
-export default [
-  // Bundle all components together
-  {
-    input: './src/index.ts',
-    output: {
-      file: 'lib/bundle.js',
-      format: 'es'
-    },
-    plugins: [
-      resolve(),
-      typescript({ 
-        compilerOptions: { 
-          declaration: true,
-          declarationDir: 'lib',
-          outDir: 'lib' 
-        } 
-      }),
-      terser({
-        ecma: 2020,
-        module: true
-      }),
-      summary()
-    ]
+export default {
+  input: 'src/index.ts',
+  output: {
+    dir: 'lib',
+    format: 'esm',
+    sourcemap: true,
+    preserveModules: true,
+    preserveModulesRoot: 'src',
   },
-  // Individual component bundles
-  ...componentFiles.map(file => {
-    const componentName = file.split('/').pop().replace('.ts', '');
-    return {
-      input: file,
-      output: {
-        file: `lib/components/${componentName}.js`,
-        format: 'es'
-      },
-      plugins: [
-        resolve(),
-        typescript({ 
-          compilerOptions: { 
-            declaration: true,
-            declarationDir: 'lib/components',
-            outDir: 'lib/components' 
-          } 
-        }),
-        terser({
-          ecma: 2020,
-          module: true
-        }),
-        summary()
-      ]
-    };
-  })
-];
+  plugins: [
+    typescript({
+      tsconfig: './tsconfig.json',
+    }),
+    resolve(),
+    commonjs(),
+  ],
+  external: [], // Add external dependencies here if needed
+};
